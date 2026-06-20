@@ -31,3 +31,6 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Publish script (contains auth logic)
+publish.sh

@@ -13,8 +13,8 @@ export function findPatternMatches(content: string, pattern: RegExp): RegExpMatc
   return matches;
 }
 
-export function extractKeyValuePairs(content: string): Array<{ key: string; value: string; line: number }> {
-  const pairs: Array<{ key: string; value: string; line: number }> = [];
+export function extractKeyValuePairs(content: string): Array<{ key: string; value: string; line: number; rawLine: string }> {
+  const pairs: Array<{ key: string; value: string; line: number; rawLine: string }> = [];
   const lines = content.split('\n');
 
   for (let i = 0; i < lines.length; i++) {
@@ -40,7 +40,8 @@ export function extractKeyValuePairs(content: string): Array<{ key: string; valu
       pairs.push({
         key,
         value,
-        line: i + 1
+        line: i + 1,
+        rawLine: lines[i]
       });
     }
   }
