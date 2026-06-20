@@ -1,56 +1,62 @@
-# Confiscan Monorepo
+# Confiscan
 
-[![npm version](https://badge.fury.io/js/confiscan.svg)](https://www.npmjs.com/package/confiscan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://github.com/Clinvio/confiscan/actions/workflows/ci.yml/badge.svg)](https://github.com/Clinvio/confiscan/actions)
 
 **Pre-commit secret and PII scanner for configuration files**
 
-This monorepo contains the Confiscan CLI tool and GitHub Action for scanning configuration files for hardcoded secrets and PII.
+Confiscan scans your configuration files (.env, .yml, .yaml, .properties, .json) for hardcoded secrets and PII before they get committed to your repository.
 
-## Packages
+## Features
 
-### [@confiscan/core](./packages/core)
+- **Secrets Detection**: AWS keys, JWT tokens, API keys, database connection strings, private keys
+- **PII Detection**: Email addresses, SSNs, phone numbers, dates of birth, addresses, healthcare info
+- **Multiple Output Formats**: Text, JSON, SARIF
+- **Pre-commit Integration**: Git hooks, husky, pre-commit framework
+- **CI/CD Ready**: Exit codes for pipeline integration
+- **Privacy First**: All scanning happens locally, no data leaves your machine
+- **Standalone Binaries**: No Node.js required for end users
 
-Shared detection engine with pure functions and no I/O side effects.
+## Installation
 
-- Secrets detection rules (AWS keys, JWT tokens, API keys, etc.)
-- PII detection rules (email, SSN, phone, etc.)
-- Utility functions (entropy calculation, regex matching, redaction)
-- Configuration parsing
+### Standalone Binary (Recommended)
 
-### [confiscan](./packages/cli)
+Download the binary for your platform from [GitHub Releases](https://github.com/Clinvio/confiscan/releases):
 
-CLI wrapper for the detection engine.
-
-- `confiscan scan` - Scan files for secrets and PII
-- `confiscan init` - Initialize configuration and pre-commit hooks
-- `confiscan license` - Activate Pro license
-- Multiple output formats (text, JSON, SARIF)
-- Pre-commit hook integration
-
-### [cve-comment-scanner](./packages/github-action)
-
-GitHub Action for dependency CVE scanning with PR comments.
-
-- Maven/Gradle dependency tree parsing
-- OSV database integration
-- PR comment formatting and updating
-- Severity-based filtering
-
-## Quick Start
-
-### Install CLI
+| Platform | Architecture | File |
+|----------|--------------|------|
+| macOS | Apple Silicon (ARM64) | `confiscan-darwin-arm64.tar.gz` |
+| macOS | Intel (x64) | `confiscan-darwin-x64.tar.gz` |
+| Linux | x64 | `confiscan-linux-x64.tar.gz` |
+| Linux | ARM64 | `confiscan-linux-arm64.tar.gz` |
+| Windows | x64 | `confiscan-win-x64.zip` |
 
 ```bash
-# Install from GitHub
-npm install -g git+https://github.com/Clinvio/confiscan.git
+# Extract and install (macOS/Linux)
+tar -xzf confiscan-*.tar.gz
+chmod +x confiscan
+sudo mv confiscan /usr/local/bin/
 
-# Or clone and link
+# Verify installation
+confiscan --version
+```
+
+### From GitHub
+
+```bash
+npm install -g git+https://github.com/Clinvio/confiscan.git
+```
+
+### Clone and Link
+
+```bash
 git clone https://github.com/Clinvio/confiscan.git
-cd confiscan && npm install && npm run build
+cd confiscan
+npm install && npm run build
 npm link packages/cli
 ```
+
+## Quick Start
 
 ### Scan Current Directory
 
@@ -58,7 +64,13 @@ npm link packages/cli
 confiscan scan
 ```
 
-### Scan Staged Files
+### Scan Specific Path
+
+```bash
+confiscan scan ./config
+```
+
+### Scan Staged Files (Pre-commit)
 
 ```bash
 confiscan scan --staged
@@ -70,12 +82,172 @@ confiscan scan --staged
 confiscan init
 ```
 
+## Commands
+
+### `confiscan scan [path]`
+
+Scan a path for secrets and PII.
+
+**Flags:**
+- `--format <text|json|sarif>` - Output format (default: text)
+- `--fail-on <low|medium|high|critical>` - Fail on severity threshold (default: medium)
+- `--staged` - Scan only git-staged files
+- `--config <path>` - Override config file location
+- `--ignore <glob>` - Additional ignore globs (repeatable)
+- `--no-pii` - Disable PII detection rules
+
+**Examples:**
+
+```bash
+# Scan with JSON output
+confiscan scan --format json
+
+# Scan with SARIF output for GitHub code scanning
+confiscan scan --format sarif
+
+# Scan with custom fail threshold
+confiscan scan --fail-on high
+
+# Scan with ignore patterns
+confiscan scan --ignore "*.test.*" --ignore "test/**"
+```
+
+### `confiscan init`
+
+Initialize configuration and pre-commit hooks.
+
+**Creates:**
+- `.confiscanrc.json` - Configuration file
+- `.git/hooks/pre-commit` - Git pre-commit hook
+
+### `confiscan license <key>`
+
+Activate a Pro license for additional features.
+
+## Configuration
+
+### .confiscanrc.json
+
+```json
+{
+  "version": "1.0.0",
+  "failOn": "medium",
+  "ignore": [
+    "test/**",
+    "*.test.*",
+    "node_modules/**"
+  ],
+  "noPii": false,
+  "rules": {}
+}
+```
+
+### Environment Variables
+
+- `CONFISCAN_FAIL_ON` - Default fail-on threshold
+- `CONFISCAN_FORMAT` - Default output format
+- `CONFISCAN_IGNORE` - Additional ignore patterns (comma-separated)
+- `CONFISCAN_NO_PII` - Disable PII detection
+
+## Rules
+
+### Secrets Rules
+
+| Rule ID | Severity | Description |
+|---------|----------|-------------|
+| `secrets.aws-access-key` | Critical | AWS access key detected |
+| `secrets.aws-secret-key` | Critical | AWS secret key detected |
+| `secrets.private-key-block` | Critical | Private key block detected |
+| `secrets.db-connection-string` | Critical | Database connection string with password |
+| `secrets.jwt-hardcoded` | High | Hardcoded JWT token detected |
+| `secrets.slack-webhook` | High | Slack webhook URL detected |
+| `secrets.generic-api-key` | High | API key detected |
+| `secrets.generic-high-entropy` | Medium | High-entropy string near sensitive key |
+
+### PII Rules
+
+| Rule ID | Severity | Description |
+|---------|----------|-------------|
+| `pii.email-field` | Medium | Hardcoded email address detected |
+| `pii.ssn-field` | High | Hardcoded SSN/national ID detected |
+| `pii.phone-field` | Medium | Hardcoded phone number detected |
+| `pii.dob-field` | Medium | Hardcoded date of birth detected |
+| `pii.address-field` | Medium | Hardcoded address detected |
+| `pii.health-field` | High | Hardcoded healthcare information detected |
+
+## Pre-commit Hook Setup
+
+### Husky
+
+```bash
+npm install -D husky
+npx husky install
+npx husky add .husky/pre-commit "npx confiscan scan --staged"
+```
+
+### pre-commit Framework
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/Clinvio/confiscan
+    rev: v1.0.0
+    hooks:
+      - id: confiscan
+        args: [--staged]
+```
+
+### Simple Git Hook
+
+```bash
+#!/bin/sh
+# .git/hooks/pre-commit
+confiscan scan --staged
+```
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Security Scan
+on: [push, pull_request]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Confiscan
+        run: |
+          curl -sL https://github.com/Clinvio/confiscan/releases/download/v1.0.0/confiscan-linux-x64.tar.gz | tar xz
+          sudo mv confiscan /usr/local/bin/
+      - name: Run scan
+        run: confiscan scan --format sarif > results.sarif
+      - uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: results.sarif
+```
+
+### GitLab CI
+
+```yaml
+security_scan:
+  stage: test
+  script:
+    - curl -sL https://github.com/Clinvio/confiscan/releases/download/v1.0.0/confiscan-linux-x64.tar.gz | tar xz
+    - ./confiscan scan --format json > results.json
+  artifacts:
+    reports:
+      sast: results.json
+```
+
 ## Development
 
 ### Prerequisites
 
 - Node.js 18+
-- pnpm 8+
+- npm 9+
 
 ### Setup
 
@@ -85,16 +257,13 @@ git clone https://github.com/Clinvio/confiscan.git
 cd confiscan
 
 # Install dependencies
-pnpm install
+npm install
 
 # Build packages
-pnpm build
+npm run build
 
 # Run tests
-pnpm test
-
-# Run linting
-pnpm lint
+npm test
 ```
 
 ### Project Structure
@@ -122,7 +291,7 @@ confiscan/
 │   └── workflows/
 ├── .gitignore
 ├── package.json
-└── pnpm-workspace.yaml
+└── publish.sh          # Release script (not committed)
 ```
 
 ### Adding New Rules
@@ -137,53 +306,46 @@ confiscan/
 
 ```bash
 # Run all tests
-pnpm test
-
-# Run tests for specific package
-pnpm --filter @confiscan/core test
-pnpm --filter confiscan test
+npm test
 
 # Run tests in watch mode
-pnpm --filter @confiscan/core test --watch
+npm test --watch
 ```
 
 ### Building
 
 ```bash
 # Build all packages
-pnpm build
+npm run build
 
-# Build specific package
-pnpm --filter @confiscan/core build
-pnpm --filter confiscan build
+# Build standalone binaries
+./publish.sh binaries
 ```
 
 ## Release Process
 
-### Versioning
-
-We use [Changesets](https://github.com/changesets/changesets) for version management.
+### Creating a Release
 
 ```bash
-# Create a changeset
-pnpm changeset
-
-# Version packages
-pnpm version
-
-# Publish to npm
-pnpm release
+# Build + create GitHub release with all binaries
+./publish.sh release
 ```
 
-### Publishing
+This will:
+1. Build TypeScript packages
+2. Create standalone binaries for all platforms (macOS, Linux, Windows)
+3. Create a GitHub release with all assets attached
 
-1. Create a changeset with your changes
-2. Merge to main branch
-3. GitHub Actions will automatically:
-   - Run tests
-   - Build packages
-   - Publish to npm
-   - Create GitHub release with binaries
+### Release Assets
+
+Each release includes:
+- `confiscan-darwin-arm64.tar.gz` - macOS Apple Silicon
+- `confiscan-darwin-x64.tar.gz` - macOS Intel
+- `confiscan-linux-x64.tar.gz` - Linux x64
+- `confiscan-linux-arm64.tar.gz` - Linux ARM64
+- `confiscan-win-x64.zip` - Windows x64
+- `clinvio-hu-confiscan-core-1.0.0.tgz` - Core npm package
+- `clinvio-hu-confiscan-1.0.0.tgz` - CLI npm package
 
 ## Contributing
 
@@ -191,7 +353,7 @@ pnpm release
 2. Create a feature branch
 3. Make your changes
 4. Add tests
-5. Run linting and tests
+5. Run tests: `npm test`
 6. Submit a pull request
 
 ## License
@@ -202,4 +364,3 @@ MIT © [Clinvio](https://github.com/Clinvio)
 
 - **Issues**: [GitHub Issues](https://github.com/Clinvio/confiscan/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Clinvio/confiscan/discussions)
-- **Email**: support@clinvio.com
