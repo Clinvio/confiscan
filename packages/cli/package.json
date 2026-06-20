@@ -57,9 +57,7 @@
     ],
     "outputPath": "binaries"
   },
-  "dependencies": {
-    "@clinvio-hu/confiscan-core": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "pkg": "^5.8.1",
     "typescript": "^5.3.0",
