@@ -9,6 +9,14 @@ node_modules/
 dist/
 build/
 binaries/
+dist-release/
+*.tgz
+
+# Test files
+coverage/
+*.test.ts
+__tests__/
+__fixtures__/
 
 # IDE
 .vscode/
@@ -25,12 +33,31 @@ Thumbs.db
 .env
 .env.local
 
-# Coverage
-coverage/
-
 # Temporary files
 tmp/
 temp/
 
-# Publish script (contains auth logic)
+# Publish script (private)
 publish.sh
+
+# Plan documents (internal)
+implementation-plan.md
+implementation-spec.txt
+phase3-detailed-plan.md
+phase3-implementation-plan.md
+distribution-plan.md
+
+# TypeScript build info
+*.tsbuildinfo
+
+# pnpm (not using anymore)
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
+# GitHub Actions (keep only CI)
+.github/workflows/build-binaries.yml
+.github/workflows/npm-publish.yml
+.github/workflows/release.yml
+
+# Package lock
+package-lock.json
