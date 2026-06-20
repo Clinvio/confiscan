@@ -1,0 +1,62 @@
+{
+  "name": "@clinvio-hu/confiscan",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Pre-commit secret and PII scanner for configuration files",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "confiscan": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm build && pnpm test",
+    "build:binary": "pkg . --output binaries/confiscan",
+    "build:binary:macos": "pkg . --target node18-macos-arm64,node18-macos-x64 --output binaries/confiscan",
+    "build:binary:linux": "pkg . --target node18-linux-x64 --output binaries/confiscan",
+    "build:binary:windows": "pkg . --target node18-win-x64 --output binaries/confiscan"
+  },
+  "keywords": [
+    "security",
+    "secrets",
+    "pii",
+    "scanner",
+    "pre-commit",
+    "git-hooks",
+    "configuration",
+    "env",
+    "yaml",
+    "json"
+  ],
+  "author": "Clinvio",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Clinvio/confiscan.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/Clinvio/confiscan#readme",
+  "bugs": {
+    "url": "https://github.com/Clinvio/confiscan/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@clinvio-hu/confiscan-core": "workspace:*"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

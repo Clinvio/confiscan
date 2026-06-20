@@ -1,0 +1,306 @@
+# Spring Boot Application Configuration
+# This file should produce ZERO findings
+# All sensitive values use environment variable references
+
+spring:
+  application:
+    name: ${APP_NAME:my-application}
+  
+  # Database Configuration
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_POOL_TIMEOUT:30000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:1800000}
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: ${JPA_OPEN_IN_VIEW:false}
+  
+  # Security Configuration
+  security:
+    user:
+      name: ${SECURITY_USERNAME:user}
+      password: ${SECURITY_PASSWORD:changeme}
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope:
+              - user:email
+              - read:user
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI}
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      timeout: ${REDIS_TIMEOUT:2000}
+  
+  # Mail Configuration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: ${CONTEXT_PATH:/api}
+  ssl:
+    enabled: ${SSL_ENABLED:false}
+    key-store: ${SSL_KEY_STORE}
+    key-store-password: ${SSL_KEY_STORE_PASSWORD}
+    key-store-type: ${SSL_KEY_STORE_TYPE:PKCS12}
+    key-alias: ${SSL_KEY_ALIAS}
+  compression:
+    enabled: ${COMPRESSION_ENABLED:true}
+    mime-types: application/json,application/xml,text/html,text/plain
+  http2:
+    enabled: ${HTTP2_ENABLED:true}
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800}
+  issuer: ${JWT_ISSUER:confiscan}
+
+# Email Configuration
+email:
+  from: ${EMAIL_FROM:noreply@example.com}
+  smtp:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    auth: ${SMTP_AUTH:true}
+    starttls: ${SMTP_STARTTLS:true}
+
+# Logging Configuration
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.example: ${APP_LOG_LEVEL:DEBUG}
+    org.springframework.security: ${SECURITY_LOG_LEVEL:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE:logs/application.log}
+    max-size: ${LOG_MAX_SIZE:10MB}
+    max-history: ${LOG_MAX_HISTORY:30}
+  logback:
+    rollingpolicy:
+      max-file-size: ${LOG_MAX_FILE_SIZE:10MB}
+      max-history: ${LOG_MAX_HISTORY:30}
+      total-size-cap: ${LOG_TOTAL_SIZE_CAP:1GB}
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: ${ACTUATOR_BASE_PATH:/actuator}
+  endpoint:
+    health:
+      show-details: ${HEALTH_DETAILS:when-authorized}
+      probes:
+        enabled: true
+    info:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: ${PROMETHEUS_ENABLED:true}
+  health:
+    redis:
+      enabled: ${REDIS_HEALTH_ENABLED:true}
+    db:
+      enabled: ${DB_HEALTH_ENABLED:true}
+
+# Custom Application Properties
+app:
+  name: ${APP_NAME:My Application}
+  version: ${APP_VERSION:1.0.0}
+  description: ${APP_DESCRIPTION:A Spring Boot application}
+  
+  # Feature Flags
+  features:
+    cache-enabled: ${CACHE_ENABLED:true}
+    notifications-enabled: ${NOTIFICATIONS_ENABLED:true}
+    audit-enabled: ${AUDIT_ENABLED:true}
+    rate-limiting-enabled: ${RATE_LIMITING_ENABLED:true}
+  
+  # External Services
+  services:
+    payment:
+      url: ${PAYMENT_SERVICE_URL}
+      api-key: ${PAYMENT_SERVICE_API_KEY}
+      timeout: ${PAYMENT_SERVICE_TIMEOUT:5000}
+    notification:
+      url: ${NOTIFICATION_SERVICE_URL}
+      api-key: ${NOTIFICATION_SERVICE_API_KEY}
+      timeout: ${NOTIFICATION_SERVICE_TIMEOUT:3000}
+    storage:
+      provider: ${STORAGE_PROVIDER:s3}
+      bucket: ${STORAGE_BUCKET}
+      region: ${STORAGE_REGION:us-east-1}
+      access-key: ${STORAGE_ACCESS_KEY}
+      secret-key: ${STORAGE_SECRET_KEY}
+  
+  # Security
+  security:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+      allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+      allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+      allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+    rate-limiting:
+      requests-per-minute: ${RATE_LIMIT_REQUESTS:60}
+      burst-capacity: ${RATE_LIMIT_BURST:100}
+  
+  # Monitoring
+  monitoring:
+    enabled: ${MONITORING_ENABLED:true}
+    sample-rate: ${MONITORING_SAMPLE_RATE:0.1}
+    export-interval: ${MONITORING_EXPORT_INTERVAL:60}
+
+# Spring Cloud Configuration (if using Spring Cloud)
+spring:
+  cloud:
+    config:
+      uri: ${CONFIG_SERVER_URI:http://localhost:8888}
+      fail-fast: ${CONFIG_FAIL_FAST:false}
+      retry:
+        max-attempts: ${CONFIG_RETRY_MAX_ATTEMPTS:6}
+        initial-interval: ${CONFIG_RETRY_INITIAL_INTERVAL:1000}
+        max-interval: ${CONFIG_RETRY_MAX_INTERVAL:2000}
+        multiplier: ${CONFIG_RETRY_MULTIPLIER:1.1}
+
+# Ribbon Configuration (if using client-side load balancing)
+ribbon:
+  eureka:
+    enabled: ${RIBBON_EUREKA_ENABLED:false}
+  MaxAutoRetries: ${RIBBON_MAX_AUTO_RETRIES:0}
+  MaxAutoRetriesNextServer: ${RIBBON_MAX_AUTO_RETRIES_NEXT_SERVER:1}
+  OkToRetryOnAllOperations: ${RIBBON_OK_TO_RETRY_ON_ALL_OPERATIONS:true}
+  ServerListRefreshInterval: ${RIBBON_SERVER_LIST_REFRESH_INTERVAL:30000}
+
+# Hystrix Configuration (if using circuit breaker)
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: ${HYSTRIX_TIMEOUT:10000}
+      circuitBreaker:
+        requestVolumeThreshold: ${HYSTRIX_REQUEST_VOLUME_THRESHOLD:20}
+        errorThresholdPercentage: ${HYSTRIX_ERROR_THRESHOLD_PERCENTAGE:50}
+        sleepWindowInMilliseconds: ${HYSTRIX_SLEEP_WINDOW:5000}
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: ${SWAGGER_API_DOCS_PATH:/v3/api-docs}
+  swagger-ui:
+    path: ${SWAGGER_UI_PATH:/swagger-ui.html}
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+# Task Scheduling
+spring:
+  task:
+    scheduling:
+      pool:
+        size: ${TASK_SCHEDULING_POOL_SIZE:5}
+    execution:
+      pool:
+        core-size: ${TASK_EXECUTION_POOL_CORE_SIZE:8}
+        max-size: ${TASK_EXECUTION_POOL_MAX_SIZE:16}
+        queue-capacity: ${TASK_EXECUTION_QUEUE_CAPACITY:100}
+
+# WebSocket Configuration
+spring:
+  websocket:
+    max-text-message-size: ${WEBSOCKET_MAX_TEXT_MESSAGE_SIZE:65536}
+    max-binary-message-size: ${WEBSOCKET_MAX_BINARY_MESSAGE_SIZE:65536}
+
+# File Upload Configuration
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${MAX_FILE_SIZE:10MB}
+      max-request-size: ${MAX_REQUEST_SIZE:10MB}
+
+# Session Configuration
+spring:
+  session:
+    store-type: ${SESSION_STORE_TYPE:redis}
+    timeout: ${SESSION_TIMEOUT:1800}
+    redis:
+      namespace: ${SESSION_REDIC_NAMESPACE:confiscan:session}
+
+# Cache Configuration
+spring:
+  cache:
+    type: ${CACHE_TYPE:redis}
+    redis:
+      time-to-live: ${CACHE_TTL:3600000}
+      cache-null-values: ${CACHE_NULL_VALUES:true}
+
+# Flyway Database Migration
+spring:
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+    validate-on-migrate: ${FLYWAY_VALIDATE_ON_MIGRATE:true}
+
+# Liquibase Database Migration (alternative to Flyway)
+spring:
+  liquibase:
+    enabled: ${LIQUIBASE_ENABLED:false}
+    change-log: ${LIQUIBASE_CHANGE_LOG:classpath:db/changelog/db.changelog-master.xml}

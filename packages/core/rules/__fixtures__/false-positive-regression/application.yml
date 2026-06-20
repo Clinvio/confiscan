@@ -1,0 +1,44 @@
+# Spring Boot Application Configuration
+# This file should produce ZERO findings
+
+spring:
+  application:
+    name: my-application
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
+# AWS Configuration
+aws:
+  access-key-id: ${AWS_ACCESS_KEY_ID}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY}
+  region: ${AWS_REGION:us-east-1}
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400}
+
+# Email Configuration
+email:
+  from: ${EMAIL_FROM:noreply@example.com}
+  smtp:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT:587}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.example: DEBUG

@@ -1,0 +1,306 @@
+IMPLEMENTATION SPECIFICATION
+Target audience: autonomous coding agent. No human will read this document directly.
+Author/owner: Peter, Clinvio.
+Scope: two independent products that share a detection engine. Build PRODUCT B (CLI) first,
+since PRODUCT A (GitHub Action) reuses its core logic.
+
+================================================================================
+GLOBAL CONVENTIONS (apply to both products)
+================================================================================
+
+- Language: TypeScript/Node.js for both products (shared core library, two thin wrappers).
+  Rationale: GitHub Actions JS runtime is native Node; npm/Homebrew CLI distribution also
+  favors Node. Avoids maintaining two languages for one detection engine.
+- Repo layout (single monorepo):
+    /packages/core          -> shared detection engine, no I/O side effects, pure functions
+    /packages/cli           -> Product B wrapper (bin entrypoint, arg parsing, output formatting)
+    /packages/github-action -> Product A wrapper (action.yml, PR comment formatting, CVE lookup)
+    /packages/core/rules    -> rule definitions (see RULE SCHEMA below)
+- Package manager: pnpm workspaces.
+- Testing: vitest. Every detection rule MUST have positive and negative test fixtures under
+  /packages/core/rules/__fixtures__/<rule-id>/{positive,negative}/*.
+- Licensing/payment: Stripe for CLI license keys (see PRODUCT B section). GitHub Marketplace
+  native billing for Product A (no custom Stripe integration needed there — GitHub handles it).
+- Versioning: semver. Tag releases as cli-vX.Y.Z and action-vX.Y.Z independently since they
+  ship on different cadences (npm publish vs. GitHub release/tag).
+- No telemetry/network calls from the CLI core scan path itself (privacy-sensitive product —
+  scanning for secrets — must not phone home with scan results). License check is the only
+  permitted outbound call, and it must send a license key only, never scan results or file paths.
+
+================================================================================
+PRODUCT B: PRE-COMMIT SECRET/PII SCANNER CLI
+================================================================================
+
+PURPOSE
+Static scanner for config files (.env, application.yml, application.properties, .json config
+files) that flags hardcoded secrets and PII-shaped fields before commit. Installable as a
+pre-commit hook or run ad-hoc.
+
+--------------------------------------------------------------------------------
+B.1 CLI INTERFACE
+--------------------------------------------------------------------------------
+Binary name: `secretsentry` (placeholder — confirm npm name availability before publish;
+fallback names: `confiscan`, `leakguard`).
+
+Commands:
+  secretsentry scan [path]              Scan a path (default: cwd). Exit code 1 if findings
+                                         at or above --fail-on severity, else 0.
+  secretsentry scan --staged            Scan only git-staged files (for pre-commit hook use).
+  secretsentry init                     Writes a default .secretsentryrc.json config and a
+                                         .pre-commit-config or husky hook snippet to the repo.
+  secretsentry license <key>            Activates a Pro license (stores key in
+                                         ~/.secretsentry/license, see B.4).
+
+Flags (apply to `scan`):
+  --format <text|json|sarif>            Default: text (human-readable). json for CI piping.
+                                         sarif for GitHub code-scanning upload (Pro feature).
+  --fail-on <low|medium|high|critical>  Default: medium. Findings below this threshold are
+                                         reported but do not affect exit code.
+  --config <path>                       Override default .secretsentryrc.json location.
+  --ignore <glob>                       Repeatable. Additional ignore globs beyond .gitignore.
+  --no-pii                              Disable PII detection rules, secrets rules only
+                                         (some teams only want secrets, not PII, scanned).
+
+--------------------------------------------------------------------------------
+B.2 DETECTION ENGINE — RULE SCHEMA
+--------------------------------------------------------------------------------
+Each rule is a JSON/TS object in /packages/core/rules/<category>/<rule-id>.ts:
+
+  {
+    id: string                     // e.g. "secrets.aws-access-key"
+    category: "secret" | "pii"
+    severity: "low"|"medium"|"high"|"critical"
+    description: string            // human-readable, shown in findings
+    fileTypes: string[]            // e.g. ["env", "yml", "yaml", "properties", "json"]
+    detect: (fileContent: string, filePath: string, parsedKV: KeyValuePair[]) => Finding[]
+    quickFixHint?: string          // optional remediation text shown in output
+  }
+
+  Finding = {
+    ruleId: string
+    file: string
+    line: number
+    column?: number
+    matchedText: string            // REDACTED before output — see B.3 redaction rule
+    severity: string
+    message: string
+  }
+
+MVP rule set — SECRETS category (pattern-based, regex + entropy where noted):
+  secrets.aws-access-key        Pattern: AKIA[0-9A-Z]{16}
+  secrets.aws-secret-key        High-entropy 40-char base64-like string near a key named
+                                 *secret*, *aws*, combined with entropy threshold to reduce
+                                 false positives
+  secrets.generic-api-key       Key name matches /api[_-]?key/i with a non-placeholder value
+                                 (value not matching ${...}, <...>, "changeme", "xxx", etc.)
+  secrets.private-key-block     Pattern: "-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----"
+  secrets.jwt-hardcoded         Pattern: eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+
+  secrets.db-connection-string  Pattern matches jdbc:*://user:pass@host patterns with a
+                                 non-empty password segment
+  secrets.slack-webhook         Pattern: hooks.slack.com/services/T[A-Z0-9]+/B[A-Z0-9]+/...
+  secrets.generic-high-entropy  Fallback: any value >= 20 chars with Shannon entropy >= 4.0
+                                 near a key matching /token|secret|password|pwd|credential/i
+
+MVP rule set — PII category (field-name heuristic, reuse logic ported from Clinvio Nucleus
+GDPR module — check that module first for existing field-name lists before writing new ones):
+  pii.email-field               Key name matches /email/i (flags presence, not the value itself
+                                 unless value looks like a real email pattern hardcoded in config)
+  pii.ssn-field                 Key name matches /ssn|social_security|national_id/i
+  pii.phone-field                Key name matches /phone|mobile|tel(ephone)?/i
+  pii.dob-field                 Key name matches /dob|date_of_birth|birthdate/i
+  pii.address-field             Key name matches /address|street|zipcode|postal/i
+  pii.health-field               Key name matches /diagnosis|medical|health_record|patient_id/i
+                                 (high severity — healthcare context, ties to Clinvio's domain
+                                 expertise, good differentiator vs generic scanners)
+
+NOTE: PII rules should default to flagging only when a REAL-LOOKING VALUE is hardcoded
+(e.g. an actual email address string, not just a key named "email" with value "${EMAIL_ENV}").
+Placeholder/env-var-reference values must be excluded to avoid noise — this is the #1 cause of
+false-positive fatigue in this product category and must be treated as a P0 quality bar, not
+a nice-to-have.
+
+--------------------------------------------------------------------------------
+B.3 OUTPUT / REDACTION RULE
+--------------------------------------------------------------------------------
+CRITICAL: matchedText must NEVER be printed in full in any output format (text/json/sarif).
+Always redact to first 4 + last 2 characters, middle replaced with asterisks, e.g.
+"AKIA****ZK". This applies even in --format json. Rationale: scan output itself must not
+become a new secret-leak vector (e.g. if json output is piped into a CI log that gets archived
+or posted publicly).
+
+Text format example:
+  [HIGH] secrets.aws-access-key  config/application.yml:14
+    Hardcoded AWS access key detected: AKIA****ZK
+    Fix: move to environment variable or secrets manager reference.
+
+--------------------------------------------------------------------------------
+B.4 LICENSING (Free vs Pro)
+--------------------------------------------------------------------------------
+Free tier: all SECRETS rules, text output only, unlimited use, no license key required.
+Pro tier ($ placeholder, set via Stripe — confirm pricing separately, not part of this spec):
+  - All PII rules
+  - json/sarif output formats
+  - Custom rule definitions via .secretsentryrc.json (user-supplied regex rules)
+  - Org-wide aggregation: a `secretsentry report --org` command that uploads ONLY aggregate
+    counts (not findings/file paths/matched text) to a Clinvio-hosted dashboard endpoint —
+    this is the one feature allowed to call home, and it must be explicitly opt-in, documented,
+    and behind its own flag, never default-on.
+
+License check implementation:
+  - On `secretsentry license <key>`, POST the key to a Clinvio-hosted license endpoint
+    (endpoint TBD — implement as a config constant, not hardcoded inline, so it can be swapped).
+  - Store a signed JWT response locally at ~/.secretsentry/license with an expiry.
+  - On each `scan` invocation, check local JWT validity/expiry BEFORE attempting any network
+    call. Only re-validate against the server if expired or missing, not on every run
+    (avoid making the tool feel network-dependent for a local static-analysis tool).
+  - If license check fails/expired, gracefully degrade to Free tier behavior, never hard-fail
+    the scan command itself (a CI pipeline must not break because a license server is down).
+
+--------------------------------------------------------------------------------
+B.5 DISTRIBUTION
+--------------------------------------------------------------------------------
+- Publish to npm as the primary channel (`npx secretsentry scan` should work with zero install).
+- Homebrew formula as a secondary channel for the compiled/pkg'd binary (use `pkg` or `nexe`
+  to produce a standalone binary so Homebrew users don't need Node installed).
+- README must include a copy-pasteable husky/pre-commit-framework hook snippet — this is the
+  primary discovery/conversion surface per the product's go-to-market plan (no separate landing
+  page planned for v1).
+
+--------------------------------------------------------------------------------
+B.6 TEST PLAN
+--------------------------------------------------------------------------------
+- Unit tests per rule (positive/negative fixtures, see GLOBAL CONVENTIONS).
+- Integration test: run `scan --staged` against a fixture git repo with staged files containing
+  known findings, assert exit code and finding count.
+- False-positive regression suite: a fixture directory of REALISTIC clean config files (sample
+  Spring Boot application.yml with only env-var references, sample .env.example files) that
+  must produce ZERO findings. This suite gates every release — any new finding on this fixture
+  set on a release candidate is a release blocker.
+
+================================================================================
+PRODUCT A: GITHUB ACTION — DEPENDENCY CVE SCANNER WITH PR COMMENTS
+================================================================================
+
+PURPOSE
+GitHub Action for Maven/Gradle projects that checks dependencies against known CVE databases
+and posts a single, readable, severity-sorted PR comment (not a dashboard, not per-line
+annotations) with a one-line fix suggestion per finding.
+
+--------------------------------------------------------------------------------
+A.1 ACTION INTERFACE (action.yml)
+--------------------------------------------------------------------------------
+name: 'CVE Comment Scanner'
+inputs:
+  github-token:        required, default ${{ github.token }}
+  build-tool:           required, enum [maven, gradle], no default — must be explicit
+  fail-on-severity:     optional, enum [low, medium, high, critical], default 'high'
+  comment-mode:         optional, enum [update, new-each-run], default 'update'
+                         ('update' edits the existing bot comment on each push instead of
+                         spamming new comments — this is the key UX differentiator vs. noisy
+                         alternatives, treat as P0)
+  ignore-cves:          optional, comma-separated CVE IDs to suppress (for accepted-risk cases)
+
+outputs:
+  findings-count:        total findings count
+  highest-severity:       highest severity found, for use in downstream workflow steps
+
+--------------------------------------------------------------------------------
+A.2 PIPELINE
+--------------------------------------------------------------------------------
+1. Resolve the dependency tree:
+     - Maven: run `mvn dependency:tree` (or parse pom.xml + resolve via Maven Central metadata
+       if avoiding a full Maven invocation is preferred for speed — evaluate both, pick
+       whichever has lower cold-start time in CI, since Action speed is a competitive factor
+       against Dependabot which runs in background, not blocking CI)
+     - Gradle: run `gradle dependencies` (or use the Gradle dependency-tree plugin's machine
+       readable output if available, to avoid fragile text parsing of human-formatted output)
+2. Map resolved artifact coordinates (groupId:artifactId:version) against the OSV database
+   (https://osv.dev API, free, no API key required) — use OSV as primary source, NOT NVD
+   directly, since OSV aggregates NVD plus GitHub Security Advisories and is simpler to query
+   by package coordinate.
+3. For each CVE found, determine severity from OSV's CVSS data (or GHSA severity field if
+   CVSS is absent).
+4. Filter/sort: severity descending, then by package name.
+5. Render PR comment (see A.3 for exact format).
+6. Post or update comment via GitHub REST API (octokit), using a hidden HTML comment marker
+   in the comment body (e.g. <!-- cve-scanner-marker -->) to identify and update the bot's
+   own prior comment instead of creating duplicates.
+7. Set step outputs (findings-count, highest-severity).
+8. Exit with failure code if highest-severity >= fail-on-severity input, to optionally block
+   PR merge via branch protection — this must be configurable, not forced, since some teams
+   want visibility without blocking.
+
+--------------------------------------------------------------------------------
+A.3 PR COMMENT FORMAT (exact template)
+--------------------------------------------------------------------------------
+## 🔍 Dependency Vulnerability Scan
+
+**X critical, Y high, Z medium, W low** findings across N dependencies.
+
+| Severity | Package | Current | Fixed In | CVE |
+|---|---|---|---|---|
+| 🔴 Critical | org.example:foo | 1.2.0 | 1.2.4 | CVE-2026-XXXXX |
+| 🟠 High | org.example:bar | 3.0.0 | 3.0.1 | CVE-2026-YYYYY |
+
+<details>
+<summary>Suppressed / acknowledged (via ignore-cves)</summary>
+
+(list here if any)
+</details>
+
+_Updated automatically on each push. [Configure](link-to-readme)._
+
+NOTE: keep the table compact — one row per finding, no expanded CVE descriptions inline (link
+out to the OSV/NVD record instead via the CVE column linking to https://osv.dev/vulnerability/<id>).
+Long inline descriptions are the main complaint about competing tools and must be avoided.
+
+--------------------------------------------------------------------------------
+A.4 SHARED CORE REUSE
+--------------------------------------------------------------------------------
+This product does NOT reuse the secret/PII detection engine from Product B (different problem
+domain). It DOES reuse, from /packages/core:
+  - the generic "dependency coordinate parser" utilities if any overlap exists with future
+    Product B features (none in MVP — note for future, not a current dependency)
+  - shared GitHub API client utilities (octokit wrapper, comment-marker update logic) should
+    live in /packages/core/github-utils since this pattern (find-or-create marked comment) is
+    reusable for any future GitHub Action product, not just this one.
+
+--------------------------------------------------------------------------------
+A.5 MONETIZATION
+--------------------------------------------------------------------------------
+Free: unlimited use on public repositories.
+Paid: private repository usage, gated via a license check against GitHub's Marketplace
+purchase API (GitHub Marketplace provides a webhook/API to verify the calling org/repo has an
+active paid plan — implement this check as a gate at the start of the action run, fail with a
+clear error message and link to the Marketplace listing if no valid purchase is found for a
+private repo).
+Org tier (future, not MVP): aggregated trend dashboard across repos — explicitly out of scope
+for first release, do not build in MVP pass.
+
+--------------------------------------------------------------------------------
+A.6 TEST PLAN
+--------------------------------------------------------------------------------
+- Unit tests for dependency tree parsing (Maven and Gradle, with fixture project repos
+  containing a pom.xml / build.gradle with known vulnerable + clean dependencies).
+- Unit tests for OSV API response mapping into the internal Finding type.
+- Integration test using a real fixture PR (or a recorded/mocked GitHub API) to verify the
+  comment-update (not duplicate-create) behavior across two consecutive runs.
+- Manual smoke test: run the action against a real public repo with a known-vulnerable
+  dependency (e.g. an old log4j version) before first release, to validate end-to-end against
+  the live OSV API rather than only mocked responses.
+
+================================================================================
+BUILD ORDER / MILESTONES
+================================================================================
+M1: /packages/core secrets rules (B.2 secrets.* rules) + CLI scan command, text output, free
+    tier only. No license system yet. Ship-able as a v0.1 npm package.
+M2: PII rules + license system (B.4) + json/sarif output. CLI v1.0, Pro tier live.
+M3: npm + Homebrew distribution polish, README/hook snippets (B.5), false-positive regression
+    suite (B.6) passing clean on a corpus of real-world sample configs.
+M4: GitHub Action MVP — Maven support only first (A.1-A.3), Gradle support as M4.1 follow-up.
+M5: GitHub Action private-repo license gating (A.5), Marketplace listing submission.
+
+Do not parallelize M1-M3 against M4-M5 unless multiple agents are available — Product B (CLI)
+is the priority since its rule engine and false-positive-avoidance lessons inform engineering
+quality bar expectations for Product A, and Product B has lower external-API dependency risk
+(no reliance on osv.dev uptime) so it can ship and start generating signal faster.

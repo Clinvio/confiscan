@@ -1,0 +1,254 @@
+# Spring Cloud Bootstrap Configuration
+# This file should produce ZERO findings
+# All sensitive values use environment variable references
+
+spring:
+  application:
+    name: ${APP_NAME:my-application}
+  
+  cloud:
+    config:
+      uri: ${CONFIG_SERVER_URI:http://localhost:8888}
+      fail-fast: ${CONFIG_FAIL_FAST:false}
+      retry:
+        max-attempts: ${CONFIG_RETRY_MAX_ATTEMPTS:6}
+        initial-interval: ${CONFIG_RETRY_INITIAL_INTERVAL:1000}
+        max-interval: ${CONFIG_RETRY_MAX_INTERVAL:2000}
+        multiplier: ${CONFIG_RETRY_MULTIPLIER:1.1}
+      username: ${CONFIG_SERVER_USERNAME}
+      password: ${CONFIG_SERVER_PASSWORD}
+      label: ${CONFIG_LABEL:master}
+      profile: ${SPRING_PROFILES_ACTIVE:default}
+      discovery:
+        enabled: ${CONFIG_DISCOVERY_ENABLED:false}
+        service-id: ${CONFIG_SERVICE_ID:config-server}
+      enabled: ${CONFIG_ENABLED:true}
+    
+    # Service Discovery Configuration
+    discovery:
+      enabled: ${DISCOVERY_ENABLED:false}
+    
+    # Circuit Breaker Configuration
+    circuitbreaker:
+      hystrix:
+        enabled: ${HYSTRIX_ENABLED:false}
+    
+    # Load Balancer Configuration
+    loadbalancer:
+      ribbon:
+        enabled: ${RIBBON_ENABLED:false}
+      cache:
+        enabled: ${LOADBALANCER_CACHE_ENABLED:true}
+        ttl: ${LOADBALANCER_CACHE_TTL:35s}
+    
+    # Bus Configuration (Spring Cloud Bus)
+    bus:
+      enabled: ${BUS_ENABLED:false}
+      refresh:
+        enabled: ${BUS_REFRESH_ENABLED:true}
+      env:
+        enabled: ${BUS_ENV_ENABLED:true}
+    
+    # Stream Configuration (Spring Cloud Stream)
+    stream:
+      bindings:
+        input:
+          destination: ${STREAM_INPUT_DESTINATION:input}
+          group: ${STREAM_INPUT_GROUP:my-group}
+        output:
+          destination: ${STREAM_OUTPUT_DESTINATION:output}
+      kafka:
+        binder:
+          brokers: ${KAFKA_BROKERS:localhost:9092}
+          default-broker-port: ${KAFKA_DEFAULT_BROKER_PORT:9092}
+    
+    # Vault Configuration (Spring Cloud Vault)
+    vault:
+      enabled: ${VAULT_ENABLED:false}
+      uri: ${VAULT_URI:http://localhost:8200}
+      token: ${VAULT_TOKEN}
+      namespace: ${VAULT_NAMESPACE}
+      connection-timeout: ${VAULT_CONNECTION_TIMEOUT:5000}
+      read-timeout: ${VAULT_READ_TIMEOUT:15000}
+      ssl:
+        enabled: ${VAULT_SSL_ENABLED:false}
+        trust-store: ${VAULT_TRUST_STORE}
+        trust-store-password: ${VAULT_TRUST_STORE_PASSWORD}
+    
+    # Consul Configuration (Spring Cloud Consul)
+    consul:
+      enabled: ${CONSUL_ENABLED:false}
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
+      scheme: ${CONSUL_SCHEME:http}
+      discovery:
+        enabled: ${CONSUL_DISCOVERY_ENABLED:true}
+        instance-id: ${CONSUL_INSTANCE_ID:${spring.application.name}:${server.port}}
+        service-name: ${CONSUL_SERVICE_NAME:${spring.application.name}}
+        health-check-path: ${CONSUL_HEALTH_CHECK_PATH:/actuator/health}
+        health-check-interval: ${CONSUL_HEALTH_CHECK_INTERVAL:15s}
+      config:
+        enabled: ${CONSUL_CONFIG_ENABLED:true}
+        prefix: ${CONSUL_CONFIG_PREFIX:config}
+        default-context: ${CONSUL_CONFIG_DEFAULT_CONTEXT:application}
+        profile-separator: ${CONSUL_CONFIG_PROFILE_SEPARATOR:,}
+    
+    # Kubernetes Configuration (Spring Cloud Kubernetes)
+    kubernetes:
+      enabled: ${KUBERNETES_ENABLED:false}
+      config:
+        enabled: ${KUBERNETES_CONFIG_ENABLED:true}
+        namespace: ${KUBERNETES_NAMESPACE:default}
+        name: ${KUBERNETES_CONFIG_NAME:${spring.application.name}}
+      secrets:
+        enabled: ${KUBERNETES_SECRETS_ENABLED:true}
+        namespace: ${KUBERNETES_SECRETS_NAMESPACE:default}
+        name: ${KUBERNETES_SECRETS_NAME:${spring.application.name}}
+    
+    # Gateway Configuration (Spring Cloud Gateway)
+    gateway:
+      enabled: ${GATEWAY_ENABLED:false}
+      routes:
+        - id: ${GATEWAY_ROUTE_ID:my-service}
+          uri: ${GATEWAY_ROUTE_URI:http://localhost:8080}
+          predicates:
+            - Path=${GATEWAY_ROUTE_PATH:/api/**}
+          filters:
+            - name: ${GATEWAY_FILTER_NAME:CircuitBreaker}
+              args:
+                name: ${GATEWAY_CIRCUITBREAKER_NAME:myService}
+                fallbackUri: ${GATEWAY_CIRCUITBREAKER_FALLBACK_URI:forward:/fallback}
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: ${GATEWAY_CORS_ALLOWED_ORIGINS:*}
+            allowedMethods: ${GATEWAY_CORS_ALLOWED_METHODS:*}
+            allowedHeaders: ${GATEWAY_CORS_ALLOWED_HEADERS:*}
+    
+    # Sleuth Configuration (Distributed Tracing)
+    sleuth:
+      enabled: ${SLEUTH_ENABLED:true}
+      sampler:
+        probability: ${SLEUTH_SAMPLER_PROBABILITY:0.1}
+      propagation:
+        type: ${SLEUTH_PROPAGATION_TYPE:B3}
+      baggage:
+        remote-fields:
+          - ${SLEUTH_BAGGAGE_REMOTE_FIELDS:x-request-id}
+        correlation-fields:
+          - ${SLEUTH_BAGGAGE_CORRELATION_FIELDS:x-request-id}
+    
+    # Zipkin Configuration (Tracing Exporter)
+    zipkin:
+      enabled: ${ZIPKIN_ENABLED:false}
+      base-url: ${ZIPKIN_BASE_URL:http://localhost:9411}
+      sender:
+        type: ${ZIPKIN_SENDER_TYPE:web}
+      service:
+        name: ${ZIPKIN_SERVICE_NAME:${spring.application.name}}
+      discovery-client-enabled: ${ZIPKIN_DISCOVERY_CLIENT_ENABLED:false}
+
+# Eureka Configuration (Service Discovery)
+eureka:
+  client:
+    enabled: ${EUREKA_CLIENT_ENABLED:false}
+    service-url:
+      defaultZone: ${EUREKA_SERVICE_URL:http://localhost:8761/eureka}
+    register-with-eureka: ${EUREKA_REGISTER_WITH_EUREKA:true}
+    fetch-registry: ${EUREKA_FETCH_REGISTRY:true}
+    registry-fetch-interval-seconds: ${EUREKA_REGISTRY_FETCH_INTERVAL:30}
+    instance-info-replication-interval-seconds: ${EUREKA_INSTANCE_INFO_REPLICATION_INTERVAL:30}
+  instance:
+    prefer-ip-address: ${EUREKA_PREFER_IP_ADDRESS:false}
+    instance-id: ${EUREKA_INSTANCE_ID:${spring.application.name}:${server.port}}
+    lease-renewal-interval-in-seconds: ${EUREKA_LEASE_RENEWAL_INTERVAL:30}
+    lease-expiration-duration-in-seconds: ${EUREKA_LEASE_EXPIRATION_DURATION:90}
+
+# Ribbon Configuration
+ribbon:
+  eureka:
+    enabled: ${RIBBON_EUREKA_ENABLED:false}
+  MaxAutoRetries: ${RIBBON_MAX_AUTO_RETRIES:0}
+  MaxAutoRetriesNextServer: ${RIBBON_MAX_AUTO_RETRIES_NEXT_SERVER:1}
+  OkToRetryOnAllOperations: ${RIBBON_OK_TO_RETRY_ON_ALL_OPERATIONS:true}
+  ServerListRefreshInterval: ${RIBBON_SERVER_LIST_REFRESH_INTERVAL:30000}
+  ConnectTimeout: ${RIBBON_CONNECT_TIMEOUT:3000}
+  ReadTimeout: ${RIBBON_READ_TIMEOUT:5000}
+  NFLoadBalancerRuleClassName: ${RIBBON_LOAD_BALANCER_RULE:com.netflix.loadbalancer.RoundRobinRule}
+
+# Turbine Configuration (Circuit Breaker Monitoring)
+turbine:
+  enabled: ${TURBINE_ENABLED:false}
+  aggregator:
+    cluster-config: ${TURBINE_CLUSTER_CONFIG:default}
+  app-config: ${TURBINE_APP_CONFIG:my-service}
+  cluster-name-expression: ${TURBINE_CLUSTER_NAME_EXPRESSION:default}
+
+# Spring Cloud Function
+spring:
+  cloud:
+    function:
+      definition: ${FUNCTION_DEFINITION:}
+
+# Spring Cloud Task
+spring:
+  cloud:
+    task:
+      enabled: ${TASK_ENABLED:false}
+      closecontext-enabled: ${TASK_CLOSE_CONTEXT_ENABLED:true}
+      single-instance-enabled: ${TASK_SINGLE_INSTANCE_ENABLED:false}
+      table-prefix: ${TASK_TABLE_PREFIX:TASK_}
+
+# Spring Cloud Data Flow
+spring:
+  cloud:
+    dataflow:
+      server:
+        enabled: ${DATAFLOW_SERVER_ENABLED:false}
+
+# Spring Cloud Contract
+spring:
+  cloud:
+    contract:
+      verifier:
+        mapping:
+          enabled: ${CONTRACT_VERIFIER_MAPPING_ENABLED:false}
+
+# Spring Cloud GCP (Google Cloud Platform)
+spring:
+  cloud:
+    gcp:
+      enabled: ${GCP_ENABLED:false}
+      project-id: ${GCP_PROJECT_ID}
+      credentials:
+        location: ${GCP_CREDENTIALS_LOCATION}
+      sql:
+        enabled: ${GCP_SQL_ENABLED:false}
+        database-name: ${GCP_SQL_DATABASE_NAME}
+        instance-connection-name: ${GCP_SQL_INSTANCE_CONNECTION_NAME}
+
+# Spring Cloud AWS
+spring:
+  cloud:
+    aws:
+      enabled: ${AWS_ENABLED:false}
+      region:
+        auto: ${AWS_REGION_AUTO:true}
+        static: ${AWS_REGION_STATIC:us-east-1}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+      stack:
+        auto: ${AWS_STACK_AUTO:false}
+
+# Spring Cloud Azure
+spring:
+  cloud:
+    azure:
+      enabled: ${AZURE_ENABLED:false}
+      credential:
+        client-id: ${AZURE_CLIENT_ID}
+        client-secret: ${AZURE_CLIENT_SECRET}
+        tenant-id: ${AZURE_TENANT_ID}
+      resource-group: ${AZURE_RESOURCE_GROUP}
+      region: ${AZURE_REGION:westus}

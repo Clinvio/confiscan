@@ -1,0 +1,52 @@
+{
+  "name": "@clinvio-hu/confiscan-core",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Core detection engine for confiscan secret and PII scanner",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./rules": {
+      "types": "./dist/rules/index.d.ts",
+      "import": "./dist/rules/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    },
+    "./utils/license": {
+      "types": "./dist/utils/license.d.ts",
+      "import": "./dist/utils/license.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "security",
+    "secrets",
+    "pii",
+    "detection",
+    "engine",
+    "scanner"
+  ],
+  "author": "Clinvio",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Clinvio/confiscan.git",
+    "directory": "packages/core"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}
