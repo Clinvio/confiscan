@@ -51,6 +51,12 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "pkg": {
+    "assets": [
+      "node_modules/@clinvio-hu/confiscan-core/**/*"
+    ],
+    "outputPath": "binaries"
+  },
   "dependencies": {
     "@clinvio-hu/confiscan-core": "workspace:*"
   },
