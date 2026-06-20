@@ -19,50 +19,41 @@ Confiscan scans your configuration files (.env, .yml, .yaml, .properties, .json)
 
 ## Installation
 
-### npm (Recommended)
+### From GitHub (Recommended)
 
 ```bash
-# Install globally
-npm install -g confiscan
+# Install directly from GitHub
+npm install -g git+https://github.com/Clinvio/confiscan.git
 
-# Or use without installing
-npx confiscan scan
+# Or install a specific version
+npm install -g git+https://github.com/Clinvio/confiscan.git#v1.0.0
 ```
 
-### Homebrew
+### Clone and Link
 
 ```bash
-# Add the Clinvio tap
-brew tap Clinvio/tap
+# Clone the repository
+git clone https://github.com/Clinvio/confiscan.git
+cd confiscan
 
-# Install confiscan
-brew install confiscan
+# Install dependencies and build
+npm install
+npm run build
+
+# Link globally
+npm link packages/cli
 ```
 
-### Standalone Binary
+### Download Release
 
-Download the latest binary for your platform from [GitHub Releases](https://github.com/Clinvio/confiscan/releases):
+Download the latest release tarballs from [GitHub Releases](https://github.com/Clinvio/confiscan/releases):
 
-- **macOS (Apple Silicon)**: `confiscan-darwin-arm64.tar.gz`
-- **macOS (Intel)**: `confiscan-darwin-x64.tar.gz`
-- **Linux (x64)**: `confiscan-linux-x64.tar.gz`
-- **Linux (ARM64)**: `confiscan-linux-arm64.tar.gz`
-- **Windows (x64)**: `confiscan-win-x64.zip`
+- `clinvio-hu-confiscan-core-1.0.0.tgz` - Core detection engine
+- `clinvio-hu-confiscan-1.0.0.tgz` - CLI tool
 
 ```bash
-# Extract and make executable (Unix)
-tar -xzf confiscan-*.tar.gz
-chmod +x confiscan
-sudo mv confiscan /usr/local/bin/
-
-# Or add to PATH
-export PATH="$PATH:/path/to/confiscan"
-```
-
-### Docker
-
-```bash
-docker run --rm -v $(pwd):/workspace confiscan/confiscan scan /workspace
+# Install from downloaded tarball
+npm install -g clinvio-hu-confiscan-1.0.0.tgz
 ```
 
 ## Quick Start

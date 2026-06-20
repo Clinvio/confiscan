@@ -43,7 +43,13 @@ GitHub Action for dependency CVE scanning with PR comments.
 ### Install CLI
 
 ```bash
-npm install -g confiscan
+# Install from GitHub
+npm install -g git+https://github.com/Clinvio/confiscan.git
+
+# Or clone and link
+git clone https://github.com/Clinvio/confiscan.git
+cd confiscan && npm install && npm run build
+npm link packages/cli
 ```
 
 ### Scan Current Directory
